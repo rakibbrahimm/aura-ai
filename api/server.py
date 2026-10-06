@@ -374,8 +374,12 @@ Be helpful, concise and transparent.
             body = exc.read().decode(errors="replace")
             last_error = f"Gemini {version} HTTP {exc.code}: {body}"
 
-            if exc.code != 404:
+            if exc.code not in (404, 429, 500, 502, 503, 504):
                 raise RuntimeError(last_error)
+
+            # Temporary Gemini/API availability errors:
+            # try the next API version before failing.
+            continue
 
         except Exception as exc:
             last_error = f"Gemini {version}: {exc}"
