@@ -296,6 +296,81 @@ def read_json(handler):
         raw.decode()
     )
 
+
+def gemini(messages, username):
+    api_key = os.environ.get("GEMINI_API_KEY", "").strip()
+    if not api_key:
+        raise RuntimeError("Cloud AI key not configured.")
+
+    user = load_user(DATA, username)
+    profile = user.get("profile", {})
+    memories = user.get("memory", [])[-10:]
+
+    system = f"""
+You are AURA AI.
+Creator: RAKIB
+Tagline: Your AI presence, when you're away.
+User: {username}
+Personality: {profile.get("personality", "helpful")}
+Language: {profile.get("language", "auto")}
+Saved memories: {json.dumps(memories, ensure_ascii=False)}
+Be helpful, concise and transparent.
+""".strip()
+
+    contents = []
+    contents.append({
+        "role": "user",
+        "parts": [{"text": system}]
+    })
+
+    for item in messages[-20:]:
+        role = "user" if item.get("role") == "user" else "model"
+        contents.append({
+            "role": role,
+            "parts": [{"text": str(item.get("content", ""))}]
+        })
+
+    payload = {
+        "contents": contents
+    }
+
+    model = os.environ.get(
+        "GEMINI_MODEL",
+        "gemini-3.7-flash"
+    )
+
+    url = (
+        "https://generativelanguage.googleapis.com/"
+        "v1beta/models/"
+        + model
+        + ":generateContent"
+    )
+
+    request = urllib.request.Request(
+        url,
+        data=json.dumps(payload).encode(),
+        headers={
+            "Content-Type": "application/json",
+            "x-goog-api-key": api_key
+        },
+        method="POST"
+    )
+
+    with urllib.request.urlopen(request, timeout=60) as response:
+        result = json.loads(response.read().decode())
+
+    candidates = result.get("candidates", [])
+    if not candidates:
+        raise RuntimeError("Gemini returned no response.")
+
+    parts = candidates[0].get("content", {}).get("parts", [])
+    text = "".join(
+        str(part.get("text", ""))
+        for part in parts
+    ).strip()
+
+    return text or "I couldn't generate a response."
+
 def ollama(messages, username):
     user = load_user(
         DATA,
@@ -797,17 +872,24 @@ class Handler(BaseHTTPRequestHandler):
                 )
 
                 try:
-                    reply = ollama(
-                        previous + [
-                            {
-                                "role":
-                                    "user",
-                                "content":
-                                    message
-                            }
-                        ],
-                        username
-                    )
+                    chat_messages = previous + [
+                        {
+                            "role": "user",
+                            "content": message
+                        }
+                    ]
+
+                    if os.environ.get("GEMINI_API_KEY", "").strip():
+                        reply = gemini(
+                            chat_messages,
+                            username
+                        )
+                    else:
+                        reply = ollama(
+                            chat_messages,
+                            username
+                        )
+
                 except Exception as exc:
                     logging.exception(
                         "AI failure"
