@@ -1,9 +1,0 @@
-{
-  "name": "AURA AI",
-  "short_name": "AURA",
-  "start_url": "/",
-  "display": "standalone",
-  "background_color": "#05070d",
-  "theme_color": "#05070d",
-  "description": "AURA AI — Your AI presence, when you're away."
-}

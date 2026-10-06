@@ -1,1 +1,0 @@
-# AURA connector framework
