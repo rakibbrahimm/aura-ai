@@ -337,7 +337,10 @@ Be helpful, concise and transparent.
     model = os.environ.get(
         "GEMINI_MODEL",
         "gemini-2.5-flash"
-    )
+    ).strip()
+
+    if model.startswith("models/"):
+        model = model[7:]
 
     url = (
         "https://generativelanguage.googleapis.com/"
