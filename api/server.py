@@ -37,8 +37,8 @@ from core.billing import billing_status
 from core.roles import allowed
 from api.v1.system import status as system_status
 
-HOST = "127.0.0.1"
-PORT = 8090
+HOST = os.environ.get("AURA_HOST", "127.0.0.1")
+PORT = int(os.environ.get("PORT", os.environ.get("AURA_PORT", "8090")))
 
 DATA = os.path.join(ROOT, "data")
 WEB = os.path.join(ROOT, "web")
