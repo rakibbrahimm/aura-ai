@@ -331,7 +331,7 @@ Be helpful, concise and transparent.
         })
 
     payload = {"contents": contents}
-    model = "gemini-2.5-flash"
+    model = "gemini-3.8-flash"
 
     last_error = None
 
