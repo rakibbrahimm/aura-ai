@@ -318,11 +318,10 @@ Saved memories: {json.dumps(memories, ensure_ascii=False)}
 Be helpful, concise and transparent.
 """.strip()
 
-    contents = []
-    contents.append({
+    contents = [{
         "role": "user",
         "parts": [{"text": system}]
-    })
+    }]
 
     for item in messages[-20:]:
         role = "user" if item.get("role") == "user" else "model"
@@ -331,49 +330,57 @@ Be helpful, concise and transparent.
             "parts": [{"text": str(item.get("content", ""))}]
         })
 
-    payload = {
-        "contents": contents
-    }
+    payload = {"contents": contents}
+    model = "gemini-2.5-flash"
 
-    model = os.environ.get(
-        "GEMINI_MODEL",
-        "gemini-2.5-flash"
-    ).strip()
+    last_error = None
 
-    if model.startswith("models/"):
-        model = model[7:]
+    for version in ("v1beta", "v1"):
+        url = (
+            "https://generativelanguage.googleapis.com/"
+            + version
+            + "/models/"
+            + model
+            + ":generateContent"
+        )
 
-    url = (
-        "https://generativelanguage.googleapis.com/"
-        "v1beta/models/"
-        + model
-        + ":generateContent?key="
-        + urllib.parse.quote(api_key, safe="")
-    )
+        request = urllib.request.Request(
+            url,
+            data=json.dumps(payload).encode(),
+            headers={
+                "Content-Type": "application/json",
+                "x-goog-api-key": api_key
+            },
+            method="POST"
+        )
 
-    request = urllib.request.Request(
-        url,
-        data=json.dumps(payload).encode(),
-        headers={
-            "Content-Type": "application/json",
-        },
-        method="POST"
-    )
+        try:
+            with urllib.request.urlopen(request, timeout=60) as response:
+                result = json.loads(response.read().decode())
 
-    with urllib.request.urlopen(request, timeout=60) as response:
-        result = json.loads(response.read().decode())
+            candidates = result.get("candidates", [])
+            if not candidates:
+                raise RuntimeError("Gemini returned no response.")
 
-    candidates = result.get("candidates", [])
-    if not candidates:
-        raise RuntimeError("Gemini returned no response.")
+            parts = candidates[0].get("content", {}).get("parts", [])
+            text = "".join(
+                str(part.get("text", ""))
+                for part in parts
+            ).strip()
 
-    parts = candidates[0].get("content", {}).get("parts", [])
-    text = "".join(
-        str(part.get("text", ""))
-        for part in parts
-    ).strip()
+            return text or "I couldn't generate a response."
 
-    return text or "I couldn't generate a response."
+        except urllib.error.HTTPError as exc:
+            body = exc.read().decode(errors="replace")
+            last_error = f"Gemini {version} HTTP {exc.code}: {body}"
+
+            if exc.code != 404:
+                raise RuntimeError(last_error)
+
+        except Exception as exc:
+            last_error = f"Gemini {version}: {exc}"
+
+    raise RuntimeError(last_error or "Gemini request failed.")
 
 def ollama(messages, username):
     user = load_user(
