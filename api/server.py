@@ -7,6 +7,7 @@ import hashlib
 import secrets
 import logging
 import urllib.request
+import urllib.parse
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 ROOT = os.path.abspath(
@@ -346,7 +347,8 @@ Be helpful, concise and transparent.
         "https://generativelanguage.googleapis.com/"
         "v1beta/models/"
         + model
-        + ":generateContent"
+        + ":generateContent?key="
+        + urllib.parse.quote(api_key, safe="")
     )
 
     request = urllib.request.Request(
@@ -354,7 +356,6 @@ Be helpful, concise and transparent.
         data=json.dumps(payload).encode(),
         headers={
             "Content-Type": "application/json",
-            "x-goog-api-key": api_key
         },
         method="POST"
     )
