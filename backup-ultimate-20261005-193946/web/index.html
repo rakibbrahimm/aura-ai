@@ -1,0 +1,482 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport"
+ content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#05070d">
+<link rel="manifest" href="/manifest.json">
+<title>AURA AI 7.0</title>
+<style>
+*{box-sizing:border-box}
+body{
+ margin:0;
+ background:#05070d;
+ color:#eef3ff;
+ font-family:system-ui,-apple-system,Segoe UI,sans-serif
+}
+header{
+ padding:18px;
+ border-bottom:1px solid #20283a;
+ display:flex;
+ justify-content:space-between;
+ align-items:center
+}
+.logo{
+ font-size:25px;
+ font-weight:900;
+ letter-spacing:6px
+}
+.badge{
+ border:1px solid #2b3650;
+ border-radius:999px;
+ padding:6px 10px;
+ font-size:11px
+}
+main{
+ width:min(1000px,94%);
+ margin:20px auto
+}
+.card{
+ background:#0a0e18;
+ border:1px solid #20283a;
+ border-radius:18px;
+ padding:18px;
+ margin-bottom:16px
+}
+input,textarea,button,select{
+ width:100%;
+ padding:13px;
+ margin-top:8px;
+ border-radius:11px;
+ border:1px solid #29334a;
+ background:#070a12;
+ color:#fff
+}
+button{
+ cursor:pointer;
+ font-weight:700
+}
+.row{
+ display:grid;
+ grid-template-columns:1fr 1fr;
+ gap:10px
+}
+.chat{
+ height:50vh;
+ min-height:300px;
+ overflow:auto
+}
+.msg{
+ padding:12px;
+ margin:8px 0;
+ border-radius:14px;
+ white-space:pre-wrap;
+ overflow-wrap:anywhere
+}
+.user{background:#18223a}
+.ai{background:#111927}
+.muted{color:#8792aa;font-size:13px}
+.hidden{display:none}
+.tools{
+ display:grid;
+ grid-template-columns:repeat(4,1fr);
+ gap:8px
+}
+@media(max-width:650px){
+ .row,.tools{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<header>
+ <div>
+  <div class="logo">AURA</div>
+  <div class="muted">
+   Your AI presence, when you're away.
+  </div>
+ </div>
+ <div id="status" class="badge">OFFLINE</div>
+</header>
+
+<main>
+
+<section id="auth" class="card">
+ <h2>AURA AI 7.0</h2>
+ <input id="username" placeholder="Username">
+ <input id="password" type="password" placeholder="Password">
+
+ <div class="row">
+  <button onclick="login()">LOGIN</button>
+  <button onclick="register()">REGISTER</button>
+ </div>
+
+ <p id="authMsg" class="muted"></p>
+</section>
+
+<section id="app" class="hidden">
+
+<div class="card">
+ <div class="row">
+  <div>
+   <strong id="who">USER</strong>
+   <div id="brain" class="muted">Local brain</div>
+  </div>
+  <button onclick="logout()">LOGOUT</button>
+ </div>
+</div>
+
+<div class="card">
+ <div id="chat" class="chat"></div>
+
+ <textarea id="message"
+  rows="3"
+  placeholder="Talk to AURA..."></textarea>
+
+ <div class="tools">
+  <button onclick="send()">SEND</button>
+  <button onclick="voice()">🎙️ VOICE</button>
+  <button onclick="speak()">🔊 SPEAK</button>
+  <button onclick="historyLoad()">↻ HISTORY</button>
+ </div>
+</div>
+
+<div class="card">
+ <h3>Local Tools</h3>
+ <input id="calc"
+  placeholder="Calculator: (25*4)+10">
+ <div class="row">
+  <button onclick="calc()">CALCULATE</button>
+  <button onclick="timeTool()">TIME</button>
+ </div>
+ <button onclick="systemTool()">SYSTEM INFO</button>
+ <p id="tool" class="muted"></p>
+</div>
+
+<div class="card">
+ <h3>Memory</h3>
+ <input id="mem"
+  placeholder="Save something for AURA">
+ <button onclick="memory()">SAVE MEMORY</button>
+</div>
+
+<div class="card">
+ <h3>Profile</h3>
+ <input id="name" placeholder="Display name">
+
+ <select id="personality">
+  <option>helpful</option>
+  <option>friendly</option>
+  <option>concise</option>
+  <option>technical</option>
+ </select>
+
+ <select id="language">
+  <option>auto</option>
+  <option>English</option>
+  <option>Hindi</option>
+  <option>Urdu</option>
+  <option>Hinglish</option>
+ </select>
+
+ <button onclick="settings()">
+  SAVE SETTINGS
+ </button>
+</div>
+
+</section>
+</main>
+
+<script>
+let token=localStorage.getItem("aura7_token")||"";
+let last="";
+
+const $=x=>document.getElementById(x);
+
+async function api(path,opt={}){
+ opt.headers={
+  "Content-Type":"application/json",
+  ...(opt.headers||{})
+ };
+
+ if(token)
+  opt.headers.Authorization="Bearer "+token;
+
+ const r=await fetch(path,opt);
+ const d=await r.json().catch(()=>({}));
+
+ if(!r.ok)
+  throw Error(d.error||d.message||"Request failed");
+
+ return d;
+}
+
+async function register(){
+ try{
+  const d=await api("/register",{
+   method:"POST",
+   body:JSON.stringify({
+    username:$("username").value.trim(),
+    password:$("password").value
+   })
+  });
+
+  $("authMsg").textContent=d.message;
+ }catch(e){
+  $("authMsg").textContent=e.message;
+ }
+}
+
+async function login(){
+ try{
+  const d=await api("/login",{
+   method:"POST",
+   body:JSON.stringify({
+    username:$("username").value.trim(),
+    password:$("password").value
+   })
+  });
+
+  token=d.token;
+  localStorage.setItem("aura7_token",token);
+
+  $("auth").classList.add("hidden");
+  $("app").classList.remove("hidden");
+  $("status").textContent="ONLINE";
+  $("who").textContent=d.username;
+
+  await status();
+  await historyLoad();
+  await loadSettings();
+ }catch(e){
+  $("authMsg").textContent=e.message;
+ }
+}
+
+async function logout(){
+ try{
+  await api("/logout",{method:"POST"});
+ }catch(e){}
+
+ token="";
+ localStorage.removeItem("aura7_token");
+ location.reload();
+}
+
+function add(role,text){
+ const d=document.createElement("div");
+ d.className="msg "+(
+  role==="user"?"user":"ai"
+ );
+ d.textContent=text;
+ $("chat").appendChild(d);
+ $("chat").scrollTop=$("chat").scrollHeight;
+}
+
+async function send(){
+ const text=$("message").value.trim();
+ if(!text)return;
+
+ add("user",text);
+ $("message").value="";
+
+ try{
+  const d=await api("/chat",{
+   method:"POST",
+   body:JSON.stringify({
+    message:text
+   })
+  });
+
+  last=d.reply;
+  add("assistant",d.reply);
+  $("brain").textContent=
+   "Brain: "+d.brain;
+ }catch(e){
+  add("assistant","AURA: "+e.message);
+ }
+}
+
+async function historyLoad(){
+ try{
+  const d=await api("/history");
+  $("chat").innerHTML="";
+
+  for(const x of d.history||[])
+   add(
+    x.role==="user"?"user":"assistant",
+    x.content
+   );
+ }catch(e){}
+}
+
+async function status(){
+ try{
+  const d=await api("/api/status");
+  $("brain").textContent=
+   "Brain: "+d.brain;
+ }catch(e){}
+}
+
+async function loadSettings(){
+ try{
+  const d=await api("/settings");
+  const p=d.profile||{};
+
+  $("name").value=p.name||"";
+  $("personality").value=
+   p.personality||"helpful";
+  $("language").value=
+   p.language||"auto";
+ }catch(e){}
+}
+
+async function settings(){
+ try{
+  await api("/settings",{
+   method:"POST",
+   body:JSON.stringify({
+    profile:{
+     name:$("name").value,
+     personality:$("personality").value,
+     language:$("language").value
+    }
+   })
+  });
+ }catch(e){
+  alert(e.message);
+ }
+}
+
+async function memory(){
+ try{
+  await api("/memory",{
+   method:"POST",
+   body:JSON.stringify({
+    text:$("mem").value
+   })
+  });
+
+  $("mem").value="";
+ }catch(e){
+  alert(e.message);
+ }
+}
+
+async function calc(){
+ try{
+  const d=await api("/tool",{
+   method:"POST",
+   body:JSON.stringify({
+    tool:"calculator",
+    expression:$("calc").value
+   })
+  });
+
+  $("tool").textContent=
+   "Result: "+d.result;
+ }catch(e){
+  $("tool").textContent=e.message;
+ }
+}
+
+async function timeTool(){
+ try{
+  const d=await api("/tool",{
+   method:"POST",
+   body:JSON.stringify({
+    tool:"time"
+   })
+  });
+
+  $("tool").textContent=
+   JSON.stringify(d.result);
+ }catch(e){}
+}
+
+async function systemTool(){
+ try{
+  const d=await api("/tool",{
+   method:"POST",
+   body:JSON.stringify({
+    tool:"system"
+   })
+  });
+
+  $("tool").textContent=
+   JSON.stringify(d.result);
+ }catch(e){}
+}
+
+function voice(){
+ const R=
+  window.SpeechRecognition||
+  window.webkitSpeechRecognition;
+
+ if(!R){
+  alert("Voice recognition unavailable.");
+  return;
+ }
+
+ const r=new R();
+ r.lang="en-IN";
+ r.continuous=false;
+ r.interimResults=false;
+
+ r.onresult=e=>{
+  $("message").value=
+   e.results[0][0].transcript;
+ };
+
+ r.start();
+}
+
+function speak(){
+ if(!last)return;
+
+ if(!window.speechSynthesis){
+  alert("Speech synthesis unavailable.");
+  return;
+ }
+
+ speechSynthesis.cancel();
+
+ const u=
+  new SpeechSynthesisUtterance(last);
+
+ speechSynthesis.speak(u);
+}
+
+$("message").addEventListener(
+ "keydown",
+ e=>{
+  if(e.key==="Enter"&&!e.shiftKey){
+   e.preventDefault();
+   send();
+  }
+ }
+);
+
+if("serviceWorker" in navigator)
+ navigator.serviceWorker.register("/sw.js")
+  .catch(()=>{});
+
+if(token){
+ api("/api/status")
+  .then(()=>{
+   $("auth").classList.add("hidden");
+   $("app").classList.remove("hidden");
+   $("status").textContent="ONLINE";
+   status();
+   historyLoad();
+   loadSettings();
+  })
+  .catch(()=>{
+   token="";
+   localStorage.removeItem("aura7_token");
+  });
+}
+</script>
+</body>
+</html>

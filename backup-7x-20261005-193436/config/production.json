@@ -1,0 +1,44 @@
+{
+  "product": {
+    "name": "AURA AI",
+    "version": "7.0.0-local-production",
+    "tagline": "Your AI presence, when you're away."
+  },
+  "server": {
+    "host": "127.0.0.1",
+    "port": 8090
+  },
+  "ai": {
+    "provider": "ollama",
+    "model": "qwen2.5:0.5b",
+    "url": "http://127.0.0.1:11434/api/chat"
+  },
+  "limits": {
+    "max_message_chars": 10000,
+    "max_history": 100,
+    "max_memory": 100,
+    "rate_window_seconds": 60,
+    "rate_limit": 60
+  },
+  "features": {
+    "multi_user": true,
+    "memory": true,
+    "history": true,
+    "tools": true,
+    "voice": true,
+    "pwa": true,
+    "audit": true,
+    "rate_limit": true,
+    "admin": true,
+    "analytics": true,
+    "connectors": true,
+    "billing": true
+  },
+  "external_services": {
+    "whatsapp": false,
+    "telegram": false,
+    "instagram": false,
+    "email": false,
+    "payments": false
+  }
+}

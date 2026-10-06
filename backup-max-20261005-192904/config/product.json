@@ -1,0 +1,18 @@
+{
+  "name": "AURA AI",
+  "version": "1.0.0-local",
+  "creator": "RAKIB",
+  "tagline": "Your AI presence, when you're away.",
+  "multi_user": true,
+  "memory": true,
+  "voice": true,
+  "pwa": true,
+  "local_tools": true,
+  "connectors": {
+    "telegram": "not_configured",
+    "whatsapp": "not_configured",
+    "instagram": "not_configured",
+    "messenger": "not_configured",
+    "email": "not_configured"
+  }
+}

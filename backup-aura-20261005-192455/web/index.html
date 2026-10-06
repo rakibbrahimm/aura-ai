@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AURA AI</title>
+<style>
+body{margin:0;background:#05070b;color:#fff;font-family:Arial,sans-serif}
+main{max-width:700px;margin:auto;padding:24px}
+h1{letter-spacing:5px;text-align:center}
+.card{background:#10141c;border:1px solid #252c38;border-radius:16px;padding:20px;margin-top:20px}
+input,button{width:100%;box-sizing:border-box;padding:14px;margin-top:10px;border-radius:10px;border:1px solid #303846;background:#080b10;color:#fff}
+button{cursor:pointer;background:#182232}
+#chat{height:400px;overflow:auto;margin-top:20px}
+.msg{padding:12px;margin:8px 0;border-radius:10px}
+.user{background:#182232}
+.aura{background:#101a16}
+.hidden{display:none}
+</style>
+</head>
+
+<body>
+<main>
+<h1>AURA</h1>
+
+<div id="auth" class="card">
+<h2>Account</h2>
+<input id="username" placeholder="Username">
+<input id="password" type="password" placeholder="Password">
+
+<button onclick="register()">Create account</button>
+<button onclick="login()">Login</button>
+
+<p id="status"></p>
+</div>
+
+<div id="app" class="card hidden">
+<h2>Chat with AURA</h2>
+
+<div id="chat"></div>
+
+<input id="message" placeholder="Talk to AURA..."
+       onkeydown="if(event.key==='Enter') send()">
+
+<button onclick="send()">Send</button>
+<button onclick="logout()">Logout</button>
+</div>
+</main>
+
+<script>
+const API = "http://127.0.0.1:8090";
+
+let token = localStorage.getItem("aura_token");
+
+function status(text){
+    document.getElementById("status").textContent = text;
+}
+
+function showApp(){
+    document.getElementById("auth").classList.add("hidden");
+    document.getElementById("app").classList.remove("hidden");
+}
+
+async function register(){
+    const username = document.getElementById("username").value;
+    const password = document.getElementById("password").value;
+
+    const r = await fetch(API + "/register",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({username,password})
+    });
+
+    const data = await r.json();
+    status(data.message || data.error || "Done");
+}
+
+async function login(){
+    const username = document.getElementById("username").value;
+    const password = document.getElementById("password").value;
+
+    const r = await fetch(API + "/login",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({username,password})
+    });
+
+    const data = await r.json();
+
+    if(data.token){
+        token = data.token;
+        localStorage.setItem("aura_token",token);
+        showApp();
+    }else{
+        status(data.error || "Login failed");
+    }
+}
+
+async function send(){
+    const input = document.getElementById("message");
+    const message = input.value.trim();
+
+    if(!message) return;
+
+    addMessage("You",message);
+    input.value = "";
+
+    const r = await fetch(API + "/chat",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({
+            token,
+            message
+        })
+    });
+
+    const data = await r.json();
+
+    if(data.reply){
+        addMessage("AURA",data.reply);
+    }else{
+        addMessage("AURA","Error: " + (data.error || "Unknown error"));
+    }
+}
+
+function addMessage(name,text){
+    const chat = document.getElementById("chat");
+
+    const div = document.createElement("div");
+    div.className = "msg " + (name === "You" ? "user" : "aura");
+
+    div.textContent = name + ": " + text;
+
+    chat.appendChild(div);
+    chat.scrollTop = chat.scrollHeight;
+}
+
+function logout(){
+    localStorage.removeItem("aura_token");
+    token = null;
+    location.reload();
+}
+
+if(token){
+    showApp();
+}
+</script>
+</body>
+</html>

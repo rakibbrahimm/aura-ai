@@ -1,0 +1,630 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport"
+      content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#05070b">
+
+<link rel="manifest" href="/manifest.json">
+
+<title>AURA AI</title>
+
+<style>
+*{
+    box-sizing:border-box;
+}
+
+body{
+    margin:0;
+    background:#05070b;
+    color:#f4f7fb;
+    font-family:system-ui,Arial,sans-serif;
+}
+
+header{
+    padding:22px;
+    text-align:center;
+}
+
+.logo{
+    font-size:32px;
+    letter-spacing:8px;
+    font-weight:700;
+}
+
+.sub{
+    opacity:.6;
+    font-size:13px;
+}
+
+main{
+    width:min(900px,94%);
+    margin:auto;
+}
+
+.card{
+    background:#0d1118;
+    border:1px solid #252c37;
+    border-radius:18px;
+    padding:20px;
+    margin-bottom:18px;
+}
+
+input,button,select{
+    width:100%;
+    padding:13px;
+    margin-top:9px;
+    border-radius:10px;
+    border:1px solid #303846;
+    background:#070a0f;
+    color:#fff;
+}
+
+button{
+    cursor:pointer;
+}
+
+button:hover{
+    background:#17202d;
+}
+
+#chat{
+    height:52vh;
+    overflow:auto;
+    padding:5px;
+}
+
+.msg{
+    padding:12px 14px;
+    margin:9px 0;
+    border-radius:12px;
+    white-space:pre-wrap;
+}
+
+.user{
+    background:#17202d;
+}
+
+.aura{
+    background:#101b17;
+}
+
+.row{
+    display:flex;
+    gap:8px;
+}
+
+.row button{
+    width:auto;
+    padding-left:18px;
+    padding-right:18px;
+}
+
+.hidden{
+    display:none;
+}
+
+#status{
+    opacity:.7;
+    min-height:20px;
+}
+
+.voice{
+    font-size:22px;
+}
+
+footer{
+    text-align:center;
+    opacity:.45;
+    padding:20px;
+    font-size:12px;
+}
+</style>
+</head>
+
+<body>
+
+<header>
+    <div class="logo">AURA</div>
+    <div class="sub">
+        Your AI presence, when you're away.
+    </div>
+</header>
+
+<main>
+
+<section id="auth" class="card">
+
+    <h2>AURA Account</h2>
+
+    <input id="username"
+           placeholder="Username"
+           autocomplete="username">
+
+    <input id="password"
+           type="password"
+           placeholder="Password"
+           autocomplete="current-password">
+
+    <div class="row">
+        <button onclick="register()">Create account</button>
+        <button onclick="login()">Login</button>
+    </div>
+
+    <p id="status"></p>
+
+</section>
+
+
+<section id="app" class="hidden">
+
+<div class="card">
+
+    <div class="row">
+        <h2 style="flex:1">AURA</h2>
+        <button onclick="logout()">Logout</button>
+    </div>
+
+    <div id="chat"></div>
+
+    <div class="row">
+        <input id="message"
+               placeholder="Talk to AURA..."
+               onkeydown="
+                 if(event.key==='Enter') send()
+               ">
+
+        <button onclick="send()">Send</button>
+    </div>
+
+    <div class="row">
+        <button class="voice"
+                onclick="listen()">🎙️</button>
+
+        <button class="voice"
+                onclick="stopSpeaking()">🔇</button>
+    </div>
+
+</div>
+
+
+<div class="card">
+
+    <h3>Local Tools</h3>
+
+    <input id="calc"
+           placeholder="Example: 25 * 4 + 10">
+
+    <button onclick="calculate()">
+        Calculate
+    </button>
+
+    <p id="toolResult"></p>
+
+</div>
+
+
+<div class="card">
+
+    <h3>Settings</h3>
+
+    <select id="personality">
+        <option value="helpful">Helpful</option>
+        <option value="concise">Concise</option>
+        <option value="friendly">Friendly</option>
+        <option value="professional">Professional</option>
+    </select>
+
+    <button onclick="saveSettings()">
+        Save settings
+    </button>
+
+</div>
+
+</section>
+
+</main>
+
+<footer>
+AURA AI · Local Edition · Created by RAKIB
+</footer>
+
+
+<script>
+
+const API = location.origin;
+
+let token =
+    localStorage.getItem("aura_token") || "";
+
+function setStatus(text){
+    document.getElementById(
+        "status"
+    ).textContent = text;
+}
+
+function showApp(){
+    document.getElementById(
+        "auth"
+    ).classList.add("hidden");
+
+    document.getElementById(
+        "app"
+    ).classList.remove("hidden");
+
+    loadHistory();
+    loadSettings();
+}
+
+async function api(path, body){
+
+    const response = await fetch(
+        API + path,
+        {
+            method:"POST",
+            headers:{
+                "Content-Type":
+                    "application/json"
+            },
+            body:JSON.stringify(body)
+        }
+    );
+
+    return response.json();
+}
+
+
+async function register(){
+
+    const username =
+        document.getElementById(
+            "username"
+        ).value.trim();
+
+    const password =
+        document.getElementById(
+            "password"
+        ).value;
+
+    const data = await api(
+        "/register",
+        {
+            username,
+            password
+        }
+    );
+
+    setStatus(
+        data.message ||
+        data.error ||
+        "Done"
+    );
+}
+
+
+async function login(){
+
+    const username =
+        document.getElementById(
+            "username"
+        ).value.trim();
+
+    const password =
+        document.getElementById(
+            "password"
+        ).value;
+
+    const data = await api(
+        "/login",
+        {
+            username,
+            password
+        }
+    );
+
+    if(data.token){
+
+        token = data.token;
+
+        localStorage.setItem(
+            "aura_token",
+            token
+        );
+
+        showApp();
+
+    }else{
+
+        setStatus(
+            data.error ||
+            "Login failed"
+        );
+    }
+}
+
+
+async function send(){
+
+    const input =
+        document.getElementById(
+            "message"
+        );
+
+    const message =
+        input.value.trim();
+
+    if(!message) return;
+
+    addMessage(
+        "You",
+        message,
+        "user"
+    );
+
+    input.value = "";
+
+    const data = await api(
+        "/chat",
+        {
+            token,
+            message
+        }
+    );
+
+    if(data.reply){
+
+        addMessage(
+            "AURA",
+            data.reply,
+            "aura"
+        );
+
+        speak(data.reply);
+
+    }else{
+
+        addMessage(
+            "AURA",
+            "Error: " +
+            (data.error || "Unknown error"),
+            "aura"
+        );
+    }
+}
+
+
+async function loadHistory(){
+
+    const data = await api(
+        "/history",
+        {token}
+    );
+
+    if(!data.messages) return;
+
+    document.getElementById(
+        "chat"
+    ).innerHTML = "";
+
+    for(const message of data.messages){
+
+        addMessage(
+            message.role === "user"
+                ? "You"
+                : "AURA",
+            message.content,
+            message.role === "user"
+                ? "user"
+                : "aura"
+        );
+    }
+}
+
+
+function addMessage(
+    name,
+    text,
+    type
+){
+
+    const chat =
+        document.getElementById(
+            "chat"
+        );
+
+    const div =
+        document.createElement(
+            "div"
+        );
+
+    div.className =
+        "msg " + type;
+
+    div.textContent =
+        name + ": " + text;
+
+    chat.appendChild(div);
+
+    chat.scrollTop =
+        chat.scrollHeight;
+}
+
+
+function speak(text){
+
+    if(
+        !("speechSynthesis" in window)
+    ) return;
+
+    stopSpeaking();
+
+    const utterance =
+        new SpeechSynthesisUtterance(
+            text
+        );
+
+    utterance.rate = 1;
+
+    speechSynthesis.speak(
+        utterance
+    );
+}
+
+
+function stopSpeaking(){
+
+    if(
+        "speechSynthesis" in window
+    ){
+        speechSynthesis.cancel();
+    }
+}
+
+
+function listen(){
+
+    const Recognition =
+        window.SpeechRecognition ||
+        window.webkitSpeechRecognition;
+
+    if(!Recognition){
+
+        alert(
+            "Voice input is not supported by this browser."
+        );
+
+        return;
+    }
+
+    const recognition =
+        new Recognition();
+
+    recognition.lang =
+        navigator.language || "en-US";
+
+    recognition.interimResults =
+        false;
+
+    recognition.onresult =
+        event => {
+
+            const text =
+                event.results[0][0].transcript;
+
+            document.getElementById(
+                "message"
+            ).value = text;
+
+            send();
+        };
+
+    recognition.start();
+}
+
+
+async function calculate(){
+
+    const expression =
+        document.getElementById(
+            "calc"
+        ).value.trim();
+
+    if(!expression) return;
+
+    const data = await api(
+        "/tool",
+        {
+            token,
+            name:"calculator",
+            argument:expression
+        }
+    );
+
+    document.getElementById(
+        "toolResult"
+    ).textContent =
+        data.result ||
+        data.error ||
+        "";
+}
+
+
+async function loadSettings(){
+
+    const data = await api(
+        "/settings",
+        {token}
+    );
+
+    if(
+        data.settings &&
+        data.settings.personality
+    ){
+
+        document.getElementById(
+            "personality"
+        ).value =
+            data.settings.personality;
+    }
+}
+
+
+async function saveSettings(){
+
+    const personality =
+        document.getElementById(
+            "personality"
+        ).value;
+
+    const data = await api(
+        "/settings/update",
+        {
+            token,
+            settings:{
+                personality
+            }
+        }
+    );
+
+    alert(
+        data.success
+            ? "Settings saved."
+            : data.error
+    );
+}
+
+
+async function logout(){
+
+    await api(
+        "/logout",
+        {token}
+    );
+
+    localStorage.removeItem(
+        "aura_token"
+    );
+
+    token = "";
+
+    location.reload();
+}
+
+
+if("serviceWorker" in navigator){
+
+    navigator.serviceWorker.register(
+        "/sw.js"
+    ).catch(() => {});
+}
+
+
+if(token){
+    showApp();
+}
+
+</script>
+
+</body>
+</html>

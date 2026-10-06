@@ -7,3 +7,14 @@ data/users/*
 data/audit/*
 logs/*
 backups/*
+
+# AURA private/runtime data
+config/secrets.json
+data/system/*.db
+data/users/*
+data/audit/*
+logs/*
+*.log
+__pycache__/
+*.pyc
+.env

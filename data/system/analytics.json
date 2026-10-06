@@ -1,0 +1,12 @@
+{
+  "events": {
+    "account_created": 2,
+    "login": 2,
+    "chat": 4
+  },
+  "users": {
+    "public_test": 2,
+    "rakibrahim": 6
+  },
+  "updated": 1791255553.2480173
+}
